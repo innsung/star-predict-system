@@ -251,7 +251,25 @@ export const BuyButton = styled.button`
     box-shadow: 0 10px 25px rgba(167, 139, 250, 0.3);
   }
 
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
   @media (max-width: 768px) {
     width: 100%;
   }
+`
+
+export const LoginRequiredContainer = styled.div`
+  min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #a78bfa;
+  text-align: center;
+  padding: 3rem 1rem;
 `

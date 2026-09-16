@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import {
   PageContainer,
@@ -21,6 +22,9 @@ import {
   ContentSection,
   FilterBar,
   FilterButton,
+  DifficultyFilterButton,
+  FilterInfo,
+  FilterGroup,
   SearchBar,
   SearchInput,
   SearchIcon,
@@ -31,42 +35,122 @@ import {
   CardName,
   CardDate,
   EmptyState,
+  LoginRequiredContainer,
+  LoginButton,
 } from './styles/ConstellationCatalogPage.styles'
+import {
+  getCatalogMyAPI,
+} from '../api/auth'
 
 function ConstellationCatalogPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [filterType, setFilterType] = useState('all')
+  const [difficultyFilter, setDifficultyFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [constellations, setConstellations] = useState([])
 
-  // Mock data - 88개 별자리 중 일부만 표시
-  const constellations = [
-    { id: 1, name: '오리온자리', date: '2026.08.25', discovered: true, isNew: true },
-    { id: 2, name: '카시오페이아자리', date: '2026.08.18', discovered: true, isNew: false },
-    { id: 3, name: '큰곰자리', date: '2026.08.12', discovered: true, isNew: false },
-    { id: 4, name: '작은곰자리', date: '2026.08.03', discovered: true, isNew: false },
-    { id: 5, name: '백조자리', date: '2026.07.28', discovered: true, isNew: false },
-    { id: 6, name: '거문고자리', date: '2026.07.19', discovered: true, isNew: false },
-    ...Array.from({ length: 82 }, (_, i) => ({
-      id: i + 7,
-      name: `별자리 ${i + 7}`,
-      date: '',
-      discovered: false,
-      isNew: false,
-    })),
-  ]
+  // 로컬 스토리지에서 로그인된 유저 정보 가져오기
+  const userString = localStorage.getItem('user')
+  const user = userString ? JSON.parse(userString) : null
+
+  // 로그인하지 않은 경우 로그인 페이지로 이동
+  useEffect(() => {
+    const fetchConstellations = async () => {
+      try {
+        const token = localStorage.getItem('accessToken')
+        const myCatalog = await getCatalogMyAPI(token)
+
+        const rawData = myCatalog.map(item => ({
+          id: item.constellation_id,
+          name: item.name_ko,
+          difficulty: item.difficulty,
+          date: item.discovered_at
+            ? item.discovered_at.split('T')[0]
+            : '',
+          discovered: item.discovered,
+          isNew: false,
+          imageUrl: item.image_url,
+        }))
+
+        setConstellations(rawData)
+
+      } catch (error) {
+        console.error('별자리 도감 조회 실패:', error)
+      }
+    }
+
+    fetchConstellations()
+  }, [])
+
+    if (!user) {
+      return (
+        <PageContainer>
+          <LoginRequiredContainer>
+            <p
+              style={{
+                fontSize: '1.125rem',
+                marginBottom: '1rem',
+              }}
+            >
+              로그인이 필요합니다.
+            </p>
+
+            <LoginButton
+              onClick={() =>
+                navigate('/login', {
+                  state: {
+                    from: location.pathname + location.search,
+                  },
+                })
+              }
+            >
+              로그인하기
+            </LoginButton>
+          </LoginRequiredContainer>
+        </PageContainer>
+      )
+    }
 
   const discoveredCount = constellations.filter(c => c.discovered).length
-  const percentage = Math.round((discoveredCount / constellations.length) * 100)
+  const percentage = constellations.length > 0 ? Math.round((discoveredCount / constellations.length) * 100) : 0
 
   // Filter and search
   const filteredConstellations = useMemo(() => {
     return constellations.filter(c => {
-      const matchesFilter = filterType === 'all' ||
-                          (filterType === 'discovered' && c.discovered) ||
-                          (filterType === 'undiscovered' && !c.discovered)
-      const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase())
-      return matchesFilter && matchesSearch
+      // 발견 여부 필터
+      const matchesFilter =
+        filterType === 'all' ||
+        (filterType === 'discovered' && c.discovered) ||
+        (filterType === 'undiscovered' && !c.discovered)
+
+      // 난이도 필터
+      const matchesDifficulty =
+        difficultyFilter === 'all' ||
+        c.difficulty === difficultyFilter
+
+      // 이름 검색
+      const matchesSearch =
+        c.name.toLowerCase().includes(searchQuery.toLowerCase())
+
+      return matchesFilter && matchesDifficulty && matchesSearch
     })
-  }, [filterType, searchQuery])
+  }, [constellations, filterType, difficultyFilter, searchQuery])
+
+  const recentConstellation = useMemo(() => {
+    const discovered = constellations
+      .filter(c => c.discovered && c.date)
+      .sort(
+        (a,b) => new Date(b.date) - new Date(a.date)
+      )
+
+    return discovered[0]?.name || '없음'
+
+  }, [constellations])
+
+  const handleCardClick = (constellation) => {
+    navigate(`/constellation-info?constellation_id=${constellation.id}`)
+  }
 
   return (
     <PageContainer>
@@ -84,7 +168,7 @@ function ConstellationCatalogPage() {
             <SidebarTitle>나의 도감</SidebarTitle>
 
             <CatalogInfo>
-              <CatalogLabel>전체 88개 중</CatalogLabel>
+              <CatalogLabel>전체 89개 중</CatalogLabel>
               <CatalogCount>{discoveredCount}개 발견</CatalogCount>
             </CatalogInfo>
 
@@ -95,7 +179,7 @@ function ConstellationCatalogPage() {
             <StatsList>
               <StatItem>
                 <StatLabel>최근 발견</StatLabel>
-                <StatValue>오리온자리</StatValue>
+                <StatValue>{recentConstellation}</StatValue>
               </StatItem>
               <StatItem>
                 <StatLabel>이번 달</StatLabel>
@@ -108,24 +192,81 @@ function ConstellationCatalogPage() {
           <ContentSection>
             {/* Filter Bar */}
             <FilterBar>
+            <FilterGroup>
               <FilterButton
                 $active={filterType === 'all'}
                 onClick={() => setFilterType('all')}
               >
                 전체 {constellations.length}
               </FilterButton>
+
               <FilterButton
                 $active={filterType === 'discovered'}
                 onClick={() => setFilterType('discovered')}
               >
                 발견 {discoveredCount}
               </FilterButton>
+
               <FilterButton
                 $active={filterType === 'undiscovered'}
                 onClick={() => setFilterType('undiscovered')}
               >
                 미발견 {constellations.length - discoveredCount}
               </FilterButton>
+            </FilterGroup>
+            </FilterBar>
+
+            <FilterBar>
+              <FilterGroup>
+                <FilterButton
+                  $active={difficultyFilter === 'all'}
+                  onClick={() => setDifficultyFilter('all')}
+                >
+                  전체
+                </FilterButton>
+
+                <DifficultyFilterButton
+                  $active={difficultyFilter === '1'}
+                  $difficulty="1"
+                  onClick={() => setDifficultyFilter('1')}
+                >
+                  ✦
+                </DifficultyFilterButton>
+
+                <DifficultyFilterButton
+                  $active={difficultyFilter === '2'}
+                  $difficulty="2"
+                  onClick={() => setDifficultyFilter('2')}
+                >
+                  ✦✦
+                </DifficultyFilterButton>
+
+                <DifficultyFilterButton
+                  $active={difficultyFilter === '3'}
+                  $difficulty="3"
+                  onClick={() => setDifficultyFilter('3')}
+                >
+                  ✦✦✦
+                </DifficultyFilterButton>
+
+                <DifficultyFilterButton
+                  $active={difficultyFilter === '4'}
+                  $difficulty="4"
+                  onClick={() => setDifficultyFilter('4')}
+                >
+                  ✦✦✦✦
+                </DifficultyFilterButton>
+
+                <FilterButton
+                  $active={difficultyFilter === '관측불가'}
+                  onClick={() => setDifficultyFilter('관측불가')}
+                >
+                  관측불가
+                </FilterButton>
+              </FilterGroup>
+              <FilterInfo>
+                <span style={{ color: '#22d3ee' }}>관측불가</span> : 일반적으로 <span style={{ color: '#22d3ee' }}>한국에서 관측이 불가</span>합니다.
+              </FilterInfo>
             </FilterBar>
 
             {/* Search Bar */}
@@ -145,17 +286,43 @@ function ConstellationCatalogPage() {
             <ConstellationGrid>
               {filteredConstellations.length > 0 ? (
                 filteredConstellations.map(constellation => (
-                  <ConstellationCard key={constellation.id} $discovered={constellation.discovered}>
+                  <ConstellationCard
+                    key={constellation.id}
+                    $discovered={constellation.discovered}
+                    onClick={() => handleCardClick(constellation)}
+                  >
                     <CardImage $discovered={constellation.discovered}>
-                      ✦
-                      {constellation.isNew && <NewBadge>NEW</NewBadge>}
+                    {
+                      constellation.discovered
+                        ? (
+                            <img
+                              src={constellation.imageUrl}
+                              alt={constellation.name}
+                            />
+                          )
+                        : (
+                          constellation.difficulty === "관측불가"
+                            ? <span className="unavailable">관측불가</span>
+                            : (
+                                <span className={`difficulty difficulty-${constellation.difficulty}`}>
+                                  {"✦".repeat(Number(constellation.difficulty))}
+                                </span>
+                            )
+                        )
+                    }
+
+                    {constellation.isNew && <NewBadge>NEW</NewBadge>}
+
                     </CardImage>
-                    {constellation.discovered && (
-                      <>
-                        <CardName>{constellation.name}</CardName>
-                        <CardDate>{constellation.date}</CardDate>
-                      </>
-                    )}
+                    <CardName>
+                      {constellation.name}
+                    </CardName>
+                    <CardDate>
+                      {constellation.discovered
+                        ? constellation.date
+                        : '미발견'
+                      }
+                    </CardDate>
                   </ConstellationCard>
                 ))
               ) : (

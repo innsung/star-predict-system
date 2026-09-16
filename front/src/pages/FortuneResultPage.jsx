@@ -1,224 +1,421 @@
-import { useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Send, Trash2 } from 'lucide-react'
 import {
-  PageContainer,
-  ContentWrapper,
-  PageHeader,
-  PageTitle,
-  PageSubtitle,
-  UserInfoSection,
-  UserInfo,
-  ConstellationIcon,
-  UserDetails,
-  UserName,
-  UserMeta,
-  FortuneScore,
-  ScoreLabel,
-  ScoreValue,
-  DateSection,
-  DateText,
-  SummarySection,
-  SectionTitle,
-  SummaryContent,
-  CategoriesGrid,
-  CategoryCard,
-  CardHeader,
-  CardIcon,
-  CardTitle,
-  StarRating,
-  Star,
-  CardContent,
-  AdviceSection,
-  AdviceContent,
-  FooterInfo,
-  FooterText,
-  BackButton,
+  createFortuneChatAPI,
+  deleteFortuneConversationAPI,
+  getFortuneConversationMessagesAPI,
+  getFortuneConversationsAPI,
+} from '../api/fortune'
+import { getPaymentAccessAPI, refundPaymentAPI } from '../api/payment'
+import {
+  PageContainer, ContentWrapper, PageHeader, PageTitle, PageSubtitle,
+  UserInfoSection, UserInfo, ConstellationIcon, UserDetails, UserName,
+  UserMeta, FortuneScore, ScoreLabel, ScoreValue, DateSection, DateText,
+  SummarySection, SectionTitle, SummaryContent, CategoriesGrid, CategoryCard,
+  CardHeader, CardIcon, CardTitle, StarRating, Star, CardContent,
+  AdviceSection, AdviceContent, FooterInfo, FooterText, BackButton,
+  ChatSection, ChatMessages, ChatMessage, MessageRole, SuggestedQuestions,
+  SuggestedQuestionButton, ChatForm, ChatInput, SendButton, ChatError,
+  ConversationWorkspace,
+  HistoryPanel, HistoryHeader, ConversationList, ConversationButton,
+  ConversationItem, DeleteConversationButton, NewConversationButton,
+  RefundArea, RefundButton,
 } from './styles/FortuneResultPage.styles'
 
-const fortuneCategories = [
-  {
-    id: 'love',
-    title: '사랑운',
-    icon: '💘',
-    score: 4,
-    borderColor: '#ec4899',
-    content: '사랑과 관련하여 좋은 기운이 감돕니다. 주변 사람들과의 관계가 더욱 돈독해질 시간입니다. 새로운 만남이 있다면 용기 있게 발을 내디뎌 보세요.',
-  },
-  {
-    id: 'wealth',
-    title: '재물운',
-    icon: '💰',
-    score: 3,
-    borderColor: '#f59e0b',
-    content: '재정 운이 평온하게 흐르는 하루입니다. 무분별한 지출을 피하고 계획적인 소비를 하면 좋은 결과를 얻을 수 있습니다. 투자는 신중히 결정하세요.',
-  },
-  {
-    id: 'health',
-    title: '건강운',
-    icon: '🏥',
-    score: 5,
-    borderColor: '#10b981',
-    content: '신체와 정신이 모두 좋은 상태입니다. 꾸준한 운동과 충분한 휴식으로 이 좋은 운을 유지하세요. 스트레스 관리도 중요한 날입니다.',
-  },
-  {
-    id: 'career',
-    title: '직업운',
-    icon: '💼',
-    score: 4,
-    borderColor: '#3b82f6',
-    content: '업무에서의 집중력이 높아지는 시간입니다. 미루던 일들을 처리하기 좋은 날이 될 것입니다. 동료들과의 소통도 원활할 것으로 보입니다.',
-  },
-  {
-    id: 'relationship',
-    title: '인간관계운',
-    icon: '👥',
-    score: 5,
-    borderColor: '#a855f7',
-    content: '인간관계에서 긍정적인 변화가 일어나는 날입니다. 소중한 사람들과의 시간을 소중히 여기세요. 좋은 사람을 만날 가능성도 높습니다.',
-  },
-]
+const CATEGORY_META = {
+  love: { title: '사랑운', icon: '💘', color: '#ec4899' },
+  wealth: { title: '재물운', icon: '💰', color: '#f59e0b' },
+  health: { title: '건강운', icon: '🏥', color: '#10b981' },
+  career: { title: '직업운', icon: '💼', color: '#3b82f6' },
+  relationship: { title: '인간관계운', icon: '👥', color: '#a855f7' },
+  general: { title: '종합운', icon: '✨', color: '#a855f7' },
+}
+
+const readStoredResult = () => {
+  const stored = sessionStorage.getItem('fortuneResult')
+  if (!stored) return null
+  try {
+    return JSON.parse(stored)
+  } catch {
+    sessionStorage.removeItem('fortuneResult')
+    return null
+  }
+}
+
+const formatToday = () => new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+}).format(new Date())
 
 function FortuneResultPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const resultState = useMemo(() => location.state || readStoredResult(), [location.state])
+  const fortune = resultState?.fortune
+  const user = resultState?.user
+  const [messages, setMessages] = useState(() => fortune ? [{ role: 'assistant', content: fortune.greeting }] : [])
+  const [suggestedQuestions, setSuggestedQuestions] = useState(fortune?.suggestedQuestions || [])
+  const [input, setInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const [conversationId, setConversationId] = useState(() => {
+    const storedId = Number(sessionStorage.getItem('fortuneConversationId'))
+    return storedId > 0 ? storedId : null
+  })
+  const [conversations, setConversations] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [deletingConversationId, setDeletingConversationId] = useState(null)
+  const [accessChecked, setAccessChecked] = useState(false)
+  const [refunding, setRefunding] = useState(false)
 
-  const userString = localStorage.getItem('user')
-  const user = userString ? JSON.parse(userString) : null
+  const handleAuthenticationError = requestError => {
+    if (requestError.status !== 401) return false
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('fortuneConversationId')
+    navigate('/login')
+    return true
+  }
 
-  if (!user) {
+  const loadConversations = async () => {
+    const accessToken = localStorage.getItem('accessToken')
+    if (!accessToken) return
+    try {
+      setConversations(await getFortuneConversationsAPI(accessToken))
+    } catch (requestError) {
+      if (!handleAuthenticationError(requestError)) {
+        setError(requestError.message)
+      }
+    }
+  }
+
+  const loadConversation = async selectedConversationId => {
+    const accessToken = localStorage.getItem('accessToken')
+    if (!accessToken || loadingHistory) return
+
+    setLoadingHistory(true)
+    setError('')
+    try {
+      const detail = await getFortuneConversationMessagesAPI(
+        accessToken,
+        selectedConversationId,
+      )
+      setConversationId(detail.conversationId)
+      sessionStorage.setItem(
+        'fortuneConversationId',
+        String(detail.conversationId),
+      )
+      setMessages(detail.messages.map(({ role, content }) => ({ role, content })))
+      setSuggestedQuestions([])
+    } catch (requestError) {
+      if (!handleAuthenticationError(requestError)) {
+        setError(requestError.message)
+      }
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const startNewConversation = () => {
+    setConversationId(null)
+    sessionStorage.removeItem('fortuneConversationId')
+    setMessages([{ role: 'assistant', content: fortune.greeting }])
+    setSuggestedQuestions(fortune.suggestedQuestions || [])
+    setError('')
+  }
+
+  const deleteConversation = async selectedConversationId => {
+    if (!window.confirm('이 대화방과 모든 메시지를 삭제할까요?')) return
+
+    const accessToken = localStorage.getItem('accessToken')
+    if (!accessToken) {
+      navigate('/login')
+      return
+    }
+
+    setDeletingConversationId(selectedConversationId)
+    setError('')
+    try {
+      await deleteFortuneConversationAPI(accessToken, selectedConversationId)
+      setConversations(current => current.filter(
+        conversation => conversation.conversationId !== selectedConversationId,
+      ))
+      if (conversationId === selectedConversationId) startNewConversation()
+    } catch (requestError) {
+      if (!handleAuthenticationError(requestError)) {
+        setError(requestError.message || '대화방을 삭제하지 못했습니다.')
+      }
+    } finally {
+      setDeletingConversationId(null)
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    const validateAccess = async () => {
+      const accessToken = localStorage.getItem('accessToken')
+      if (!accessToken) {
+        navigate('/login', { replace: true })
+        return
+      }
+
+      try {
+        const access = await getPaymentAccessAPI(accessToken)
+        if (!access.hasFortuneAccess) {
+          sessionStorage.removeItem('fortuneResult')
+          navigate('/fortune-reading', { replace: true })
+          return
+        }
+        if (!isMounted) return
+        setAccessChecked(true)
+        if (fortune) {
+          loadConversations()
+          if (conversationId) loadConversation(conversationId)
+        }
+      } catch (requestError) {
+        if (!handleAuthenticationError(requestError)) {
+          if (requestError.status === 403) {
+            sessionStorage.removeItem('fortuneResult')
+            navigate('/fortune-reading', { replace: true })
+          } else {
+            setError(requestError.message || '운세 이용 권한을 확인하지 못했습니다.')
+            setAccessChecked(true)
+          }
+        }
+      }
+    }
+
+    validateAccess()
+    return () => {
+      isMounted = false
+    }
+    // 최초 진입 시에만 결제 권한과 저장된 대화를 불러온다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (!accessChecked) {
     return (
-      <PageContainer>
-        <ContentWrapper>
-          <PageHeader>
-            <PageTitle>로그인이 필요합니다</PageTitle>
-            <PageSubtitle>운세 결과를 보려면 로그인해주세요</PageSubtitle>
-          </PageHeader>
-          <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                padding: '0.75rem 1.5rem',
-                borderRadius: '0.5rem',
-                backgroundColor: '#9333ea',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-              }}
-            >
-              로그인하기
-            </button>
-          </div>
-        </ContentWrapper>
-      </PageContainer>
+      <PageContainer><ContentWrapper>
+        <PageHeader>
+          <PageTitle>운세 이용 권한 확인 중</PageTitle>
+          <PageSubtitle>잠시만 기다려주세요.</PageSubtitle>
+        </PageHeader>
+      </ContentWrapper></PageContainer>
     )
   }
 
-  const today = new Date()
-  const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${{
-    0: '일요일',
-    1: '월요일',
-    2: '화요일',
-    3: '수요일',
-    4: '목요일',
-    5: '금요일',
-    6: '토요일',
-  }[today.getDay()]}`
-
-  const renderStars = (score) => {
-    return Array.from({ length: 5 }).map((_, index) => (
-      <Star key={index} $filled={index < score}>
-        ★
-      </Star>
-    ))
+  if (!fortune) {
+    return (
+      <PageContainer><ContentWrapper>
+        <PageHeader>
+          <PageTitle>운세 결과가 없습니다</PageTitle>
+          <PageSubtitle>오늘의 운세를 먼저 생성해주세요.</PageSubtitle>
+        </PageHeader>
+        <div style={{ textAlign: 'center' }}>
+          <BackButton type="button" onClick={() => navigate('/fortune-reading')}>운세 보러 가기</BackButton>
+        </div>
+      </ContentWrapper></PageContainer>
+    )
   }
 
+  const sendMessage = async message => {
+    const trimmedMessage = message.trim()
+    if (!trimmedMessage || sending) return
+
+    const accessToken = localStorage.getItem('accessToken')
+    if (!accessToken) {
+      navigate('/login')
+      return
+    }
+
+    const requestHistory = messages.slice(-10).map(({ role, content }) => ({ role, content }))
+    setMessages(current => [...current, { role: 'user', content: trimmedMessage }])
+    setInput('')
+    setError('')
+    setSending(true)
+
+    try {
+      const response = await createFortuneChatAPI(accessToken, {
+        conversationId,
+        message: trimmedMessage,
+        category: 'general',
+        history: requestHistory,
+      })
+      setConversationId(response.conversationId)
+      sessionStorage.setItem('fortuneConversationId', String(response.conversationId))
+      setMessages(current => [...current, { role: 'assistant', content: response.answer }])
+      setSuggestedQuestions(response.suggestedQuestions)
+      loadConversations()
+    } catch (requestError) {
+      if (handleAuthenticationError(requestError)) return
+      setError(requestError.message || '답변을 가져오지 못했습니다. 다시 시도해주세요.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleSubmit = event => {
+    event.preventDefault()
+    sendMessage(input)
+  }
+
+  const refundPayment = async () => {
+    if (refunding) return
+    if (!window.confirm('결제를 전액 환불하면 운세 챗봇을 더 이상 이용할 수 없습니다. 환불할까요?')) return
+
+    const accessToken = localStorage.getItem('accessToken')
+    if (!accessToken) {
+      navigate('/login')
+      return
+    }
+
+    setRefunding(true)
+    setError('')
+    try {
+      await refundPaymentAPI(accessToken)
+      sessionStorage.removeItem('fortuneResult')
+      sessionStorage.removeItem('fortuneConversationId')
+      alert('결제가 환불되었습니다.')
+      navigate('/fortune-reading', { replace: true })
+    } catch (requestError) {
+      if (handleAuthenticationError(requestError)) return
+      setError(requestError.message || '환불을 처리하지 못했습니다.')
+    } finally {
+      setRefunding(false)
+    }
+  }
+
+  const renderStars = score => Array.from({ length: 5 }, (_, index) => (
+    <Star key={index} $filled={index < score}>★</Star>
+  ))
+
   return (
-    <PageContainer>
-      <ContentWrapper>
-        <BackButton onClick={() => navigate('/fortune-reading')}>
-          <ChevronLeft size={20} />
-          돌아가기
-        </BackButton>
+    <PageContainer><ContentWrapper>
+      <PageHeader>
+        <PageTitle>✦ 오늘의 운세 상세 결과</PageTitle>
+        <PageSubtitle>AI 운세 상담가가 전하는 오늘의 메시지</PageSubtitle>
+      </PageHeader>
 
-        <PageHeader>
-          <PageTitle>✦ 오늘의 운세 상세 결과</PageTitle>
-          <PageSubtitle>전문 점술가와 함께하는 오늘의 메시지</PageSubtitle>
-        </PageHeader>
+      <UserInfoSection>
+        <UserInfo>
+          <ConstellationIcon>✨</ConstellationIcon>
+          <UserDetails>
+            <UserName>{user?.name || '회원'}님</UserName>
+            <UserMeta>{user?.birth_date || '등록된 생년월일 기준 분석'}</UserMeta>
+          </UserDetails>
+        </UserInfo>
+        <FortuneScore><ScoreLabel>행운지수</ScoreLabel><ScoreValue>{fortune.fortuneScore}</ScoreValue></FortuneScore>
+      </UserInfoSection>
 
-        {/* 사용자 정보 섹션 */}
-        <UserInfoSection>
-          <UserInfo>
-            <ConstellationIcon>♑</ConstellationIcon>
-            <UserDetails>
-              <UserName>{user.name}</UserName>
-              <UserMeta>{user.birthDate} · {user.gender}</UserMeta>
-            </UserDetails>
-          </UserInfo>
-          <FortuneScore>
-            <ScoreLabel>행운지수</ScoreLabel>
-            <ScoreValue>88</ScoreValue>
-          </FortuneScore>
-        </UserInfoSection>
+      <DateSection><DateText>{formatToday()}</DateText></DateSection>
 
-        {/* 날짜 정보 */}
-        <DateSection>
-          <DateText>{dateStr}</DateText>
-        </DateSection>
+      <SummarySection>
+        <SectionTitle>✦ 오늘의 종합 운세</SectionTitle>
+        <SummaryContent>
+          <p>{fortune.greeting}</p>
+          <p>{fortune.summary}</p>
+          <p>오늘의 키워드: {fortune.keywords.join(' · ')}</p>
+        </SummaryContent>
+      </SummarySection>
 
-        {/* 종합 운세 */}
-        <SummarySection>
-          <SectionTitle>✦ 오늘의 종합 운세</SectionTitle>
-          <SummaryContent>
-            <p>
-              오늘은 펀소보다 직감이 돋보나는 하루입니다. 오른쪽 직감을 믿고 행동했을 때는 도움이 지갈 길 있습니다.
-              가끔 숨소 놓을 정도로 직장이 거칠 것 수도 있어요.
-            </p>
-            <p>
-              가족과 가지민 느는 슬픔을 한잔 자중을 가거울 수 있습니다. 시들 너무 과심하지 마세요.
-            </p>
-            <p>
-              아래에서 오늘의 운세를 카테고리별로 확인해 보세요. 각 영역에서의 운의 흐름을 이해하면 오늘의 하루를 더욱 의미 있게 보낼 수 있습니다.
-            </p>
-          </SummaryContent>
-        </SummarySection>
-
-        {/* 카테고리별 운세 */}
-        <CategoriesGrid>
-          {fortuneCategories.map(category => (
-            <CategoryCard key={category.id} $borderColor={category.borderColor}>
-              <CardHeader>
-                <CardIcon>{category.icon}</CardIcon>
-                <CardTitle>{category.title}</CardTitle>
-              </CardHeader>
+      <CategoriesGrid>
+        {fortune.categorySummaries.map(category => {
+          const meta = CATEGORY_META[category.category] || CATEGORY_META.general
+          return (
+            <CategoryCard key={category.category} $borderColor={meta.color}>
+              <CardHeader><CardIcon>{meta.icon}</CardIcon><CardTitle>{category.label || meta.title}</CardTitle></CardHeader>
               <StarRating>{renderStars(category.score)}</StarRating>
-              <CardContent>{category.content}</CardContent>
+              <CardContent>{category.summary}</CardContent>
             </CategoryCard>
-          ))}
-        </CategoriesGrid>
+          )
+        })}
+      </CategoriesGrid>
 
-        {/* 조언 섹션 */}
-        <AdviceSection>
-          <SectionTitle>✦ 오늘의 조언</SectionTitle>
-          <AdviceContent>
-            <p>
-              오늘은 변화의 바람이 불어오는 시간입니다. 새로운 결정을 내려야 한다면 이 시기를 활용해 보세요.
-              직감과 이성의 균형을 맞추면 최고의 결과를 얻을 수 있습니다.
-            </p>
-            <p>
-              💡 오늘을 더 행운으로 만드는 팁: 아침의 차분한 시간을 통해 자신의 감정을 정리하고,
-              중요한 결정은 오후 3시 이후에 내리는 것을 추천합니다.
-            </p>
-          </AdviceContent>
-        </AdviceSection>
+      <AdviceSection>
+        <SectionTitle>✦ 운세 안내</SectionTitle>
+        <AdviceContent><p>{fortune.disclaimer}</p></AdviceContent>
+      </AdviceSection>
 
-        {/* 하단 정보 */}
-        <FooterInfo>
-          <FooterText>✦ 오늘의 운세는 자정에 갱신됩니다</FooterText>
-          <FooterText>이 운세는 재미와 참고를 위한 것이며, 실제 결과와 다를 수 있습니다.</FooterText>
-        </FooterInfo>
-      </ContentWrapper>
-    </PageContainer>
+      <ConversationWorkspace>
+        <HistoryPanel>
+          <HistoryHeader>
+            <SectionTitle>✦ 지난 운세 대화</SectionTitle>
+            <NewConversationButton type="button" onClick={startNewConversation}>
+              새 대화
+            </NewConversationButton>
+          </HistoryHeader>
+          <ConversationList>
+            {conversations.length === 0 && <span>저장된 대화가 없습니다.</span>}
+            {conversations.map(conversation => (
+              <ConversationItem key={conversation.conversationId}>
+                <ConversationButton
+                  type="button"
+                  $active={conversation.conversationId === conversationId}
+                  onClick={() => loadConversation(conversation.conversationId)}
+                  disabled={loadingHistory || sending}
+                >
+                  {conversation.title}
+                </ConversationButton>
+                <DeleteConversationButton
+                  type="button"
+                  onClick={() => deleteConversation(conversation.conversationId)}
+                  disabled={deletingConversationId === conversation.conversationId}
+                  aria-label={`${conversation.title} 삭제`}
+                  title="대화방 삭제"
+                >
+                  <Trash2 size={16} />
+                </DeleteConversationButton>
+              </ConversationItem>
+            ))}
+          </ConversationList>
+        </HistoryPanel>
+
+        <ChatSection>
+          <SectionTitle>✦ 운세 AI에게 더 물어보기</SectionTitle>
+          <ChatMessages aria-live="polite">
+            {messages.map((message, index) => (
+              <ChatMessage key={`${message.role}-${index}`} $role={message.role}>
+                <MessageRole>{message.role === 'user' ? '나' : 'ORION AI'}</MessageRole>
+                <p>{message.content}</p>
+              </ChatMessage>
+            ))}
+            {sending && <ChatMessage $role="assistant"><MessageRole>ORION AI</MessageRole><p>별의 흐름을 살펴보는 중입니다...</p></ChatMessage>}
+          </ChatMessages>
+
+          <SuggestedQuestions>
+            {suggestedQuestions.map(question => (
+              <SuggestedQuestionButton type="button" key={question} onClick={() => sendMessage(question)} disabled={sending}>
+                {question}
+              </SuggestedQuestionButton>
+            ))}
+          </SuggestedQuestions>
+
+          <ChatForm onSubmit={handleSubmit}>
+            <ChatInput
+              value={input}
+              onChange={event => setInput(event.target.value)}
+              placeholder="사랑운, 재물운 등 궁금한 내용을 물어보세요."
+              maxLength={500}
+              disabled={sending}
+              aria-label="운세 질문"
+            />
+            <SendButton type="submit" disabled={sending || !input.trim()}><Send size={18} /> 전송</SendButton>
+          </ChatForm>
+          {error && <ChatError role="alert">{error}</ChatError>}
+        </ChatSection>
+      </ConversationWorkspace>
+
+      <FooterInfo>
+        <FooterText>오늘의 운세는 매일 자정에 새로운 날짜를 기준으로 생성됩니다.</FooterText>
+        <FooterText>운세는 참고용이며 중요한 결정은 충분한 검토 후 내려주세요.</FooterText>
+      </FooterInfo>
+      <RefundArea>
+        <RefundButton type="button" onClick={refundPayment} disabled={refunding}>
+          {refunding ? '환불 처리 중' : '결제 환불'}
+        </RefundButton>
+      </RefundArea>
+    </ContentWrapper></PageContainer>
   )
 }
 

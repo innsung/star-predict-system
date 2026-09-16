@@ -4,11 +4,19 @@ export const PageContainer = styled.div`
   width: 100%;
   padding: 3rem 2rem;
   min-height: calc(100vh - 80px);
+
+  @media (max-width: 768px) {
+    padding: 1.5rem 1rem;
+  }
 `
 
 export const ContentWrapper = styled.div`
   max-width: 1200px;
   margin: 0 auto;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `
 
 export const ProcessIndicator = styled.div`
@@ -67,6 +75,12 @@ export const StepCircle = styled.div`
     color: white;
     box-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
   `}
+
+  ${props => props.$completed && `
+    background: rgba(16, 185, 129, 0.18);
+    border-color: #34d399;
+    color: #a7f3d0;
+  `}
 `
 
 export const StepLabel = styled.span`
@@ -94,17 +108,27 @@ export const MainDescription = styled.p`
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+
+  @media (max-width: 768px) {
+    font-size: 0.9375rem;
+    margin-bottom: 2rem;
+  }
 `
 
 export const UploadArea = styled.div`
-  border: 2px dashed #a78bfa;
+  border: 2px dashed #9333ea;
   border-radius: 1rem;
-  padding: 3rem;
+  padding: ${props => (props.$hasPreview ? '0.875rem' : '3rem')};
   background: rgba(167, 139, 250, 0.05);
   text-align: center;
   cursor: pointer;
   transition: all 300ms ease;
-  margin-bottom: 3rem;
+  margin-bottom: ${props => (props.$hasPreview ? '1.25rem' : '3rem')};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${props => (props.$hasPreview ? '0.75rem' : '0')};
 
   &:hover {
     background: rgba(167, 139, 250, 0.1);
@@ -118,8 +142,36 @@ export const UploadArea = styled.div`
   `}
 
   @media (max-width: 768px) {
-    padding: 2rem 1rem;
+    padding: 1.5rem 1rem;
+    height: 200px;
+    margin-bottom: 2rem;
   }
+`
+
+export const PreviewImage = styled.img`
+  display: block;
+  width: 100%;
+  height: clamp(230px, 32vh, 320px);
+  object-fit: contain;
+  border-radius: 0.75rem;
+  background: rgba(2, 6, 23, 0.55);
+  pointer-events: none;
+
+  @media (max-width: 768px) {
+    height: 240px;
+  }
+`
+
+export const SelectedFileName = styled.p`
+  width: 100%;
+  margin: 0;
+  color: #10b981;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `
 
 export const UploadIcon = styled.div`
@@ -150,17 +202,47 @@ export const FileInput = styled.input`
 
 export const SelectButton = styled.button`
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #a78bfa, #d8b4fe);
-  color: white;
-  border: none;
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 300ms ease;
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(167, 139, 250, 0.3);
+  ${props =>
+    props.$hasPreview
+      ? `
+    background: none;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+
+    &:hover {
+      border-color: #64748b;
+      color: white;
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+      box-shadow: none;
+    }
+  `
+      : `
+    background: linear-gradient(135deg, #a78bfa, #d8b4fe);
+    color: white;
+    border: none;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(167, 139, 250, 0.3);
+    }
+  `}
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 1rem;
+    height: 3.5rem;
+    font-size: 1rem;
   }
 `
 

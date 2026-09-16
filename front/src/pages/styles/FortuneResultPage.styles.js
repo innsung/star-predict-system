@@ -283,3 +283,260 @@ export const BackButton = styled.button`
     color: #d8b4fe;
   }
 `
+
+export const ConversationWorkspace = styled.div`
+  display: grid;
+  grid-template-columns: minmax(190px, 2fr) minmax(0, 8fr);
+  gap: 1rem;
+  align-items: stretch;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`
+
+export const ChatSection = styled.section`
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  min-width: 0;
+`
+
+export const HistoryPanel = styled.section`
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  min-width: 0;
+`
+
+export const HistoryHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+
+  ${SectionTitle} {
+    margin-bottom: 0;
+  }
+`
+
+export const ConversationList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 480px;
+  overflow-y: auto;
+  margin-top: 1rem;
+  padding-right: 0.25rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+`
+
+export const ConversationItem = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  border-radius: 0.5rem;
+  overflow: hidden;
+`
+
+export const ConversationButton = styled.button`
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  padding: 0.65rem 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 0.5rem 0 0 0.5rem;
+  border: 1px solid ${props => (props.$active ? '#a855f7' : 'rgba(148, 163, 184, 0.3)')};
+  background: ${props => (props.$active ? 'rgba(147, 51, 234, 0.25)' : 'rgba(30, 41, 59, 0.7)')};
+  color: #e2e8f0;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`
+
+export const DeleteConversationButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-left: 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: rgba(127, 29, 29, 0.2);
+  color: #fca5a5;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgba(185, 28, 28, 0.35);
+    color: #fecaca;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+export const NewConversationButton = styled.button`
+  flex: 0 0 auto;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  background: transparent;
+  color: #c4b5fd;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(147, 51, 234, 0.15);
+  }
+`
+
+export const ChatMessages = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  max-height: 480px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+`
+
+export const ChatMessage = styled.div`
+  align-self: ${props => (props.$role === 'user' ? 'flex-end' : 'flex-start')};
+  width: fit-content;
+  max-width: 82%;
+  padding: 0.875rem 1rem;
+  border-radius: ${props => (props.$role === 'user' ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem')};
+  background: ${props => (props.$role === 'user' ? '#7e22ce' : 'rgba(15, 23, 42, 0.9)')};
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  color: #e2e8f0;
+
+  p {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+`
+
+export const MessageRole = styled.span`
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #c4b5fd;
+  font-size: 0.75rem;
+  font-weight: 700;
+`
+
+export const SuggestedQuestions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+`
+
+export const SuggestedQuestionButton = styled.button`
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background: rgba(147, 51, 234, 0.12);
+  color: #ddd6fe;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgba(147, 51, 234, 0.25);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`
+
+export const ChatForm = styled.form`
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+`
+
+export const ChatInput = styled.input`
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.9);
+  color: white;
+  outline: none;
+
+  &:focus {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+  }
+
+  &::placeholder {
+    color: #64748b;
+  }
+`
+
+export const SendButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.8rem 1.1rem;
+  border: 0;
+  border-radius: 0.625rem;
+  background: linear-gradient(135deg, #9333ea, #7c3aed);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+export const ChatError = styled.p`
+  margin: 0.75rem 0 0;
+  color: #fca5a5;
+  font-size: 0.875rem;
+`
+
+export const RefundArea = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+`
+
+export const RefundButton = styled.button`
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: rgba(148, 163, 184, 0.42);
+  font-size: 0.72rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    border-color: rgba(248, 113, 113, 0.55);
+    color: #fca5a5;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+`

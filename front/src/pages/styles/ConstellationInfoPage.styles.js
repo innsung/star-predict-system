@@ -4,19 +4,30 @@ export const PageWrapper = styled.div`
   display: flex;
   gap: 2rem;
   padding: 2rem;
-  background: linear-gradient(135deg, #0f0f2e 0%, #1a0f3d 100%);
-  min-height: 100vh;
+  background: transparent;
+  width: 100%;
   max-width: 1800px;
   margin: 0 auto;
+  box-sizing: border-box;
+  align-items: stretch;
 
   @media (max-width: 1024px) {
     flex-direction: column;
     gap: 1.5rem;
+    height: auto;
+    min-height: 100vh;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    gap: 1rem;
   }
 `
 
 export const LeftSection = styled.div`
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -24,24 +35,91 @@ export const LeftSection = styled.div`
   @media (max-width: 1024px) {
     flex: none;
     width: 100%;
+    height: auto;
+    order: 2;
+  }
+`
+
+export const ConstellationListContainer = styled.div`
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 1rem;
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &:hover {
+    border-color: #a78bfa;
+  }
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(167, 139, 250, 0.3);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(167, 139, 250, 0.5);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    max-height: 420px;
   }
 `
 
 export const VisualizationPanel = styled.div`
-  background: rgba(20, 10, 50, 0.6);
-  border: 2px solid #a78bfa;
-  border-radius: 12px;
-  padding: 2rem;
-  height: 400px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 1rem;
+  padding: 1rem;
+  height: 560px;
+  flex-shrink: 0;
   display: flex;
+  flex-direction: column;
+  gap: 1rem;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
 
-  @media (max-width: 1024px) {
-    height: 300px;
+  &:hover {
+    border-color: #a78bfa;
   }
+
+  @media (max-width: 1024px) {
+    height: 520px;
+  }
+`
+
+export const ConstellationImageFrame = styled.div`
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  max-height: 100%;
+  line-height: 0;
+`
+
+export const ConstellationImage = styled.img`
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 `
 
 export const VisualizationCanvas = styled.svg`
@@ -50,20 +128,82 @@ export const VisualizationCanvas = styled.svg`
 `
 
 export const ControlButtons = styled.div`
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
   display: flex;
+  justify-content: center;
   gap: 0.5rem;
-  z-index: 10;
+  flex-shrink: 0;
+`
+
+export const ActiveStarMarker = styled.span`
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #c4b5fd;
+  box-shadow: 0 0 4px #c4b5fd, 0 0 9px #c4b5fd;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+  animation: constellationStarFlash 0.6s ease-in-out 3;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(196, 181, 253, 0.16);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translate(-50%, -50%);
+    background:
+      linear-gradient(#c4b5fd, #c4b5fd) center / 1px 16px no-repeat,
+      linear-gradient(#c4b5fd, #c4b5fd) center / 16px 1px no-repeat;
+  }
+
+  @keyframes constellationStarFlash {
+    0%, 100% { opacity: 0.72; transform: translate(-50%, -50%) scale(0.9); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+  }
+`
+
+export const ClickableLineStar = styled.button`
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 4;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: rgba(196, 181, 253, 0.2);
+    box-shadow: 0 0 8px rgba(196, 181, 253, 0.75);
+  }
 `
 
 export const ControlButton = styled.button`
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  border: 1px solid #a78bfa;
-  background: rgba(167, 139, 250, 0.2);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  background: rgba(30, 41, 59, 0.8);
   color: #a78bfa;
   cursor: pointer;
   font-size: 1.1rem;
@@ -83,28 +223,32 @@ export const ControlButton = styled.button`
 `
 
 export const DetailSection = styled.div`
-  background: rgba(20, 10, 50, 0.6);
-  border: 2px solid #a78bfa;
-  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 1rem;
   padding: 2rem;
-  max-height: 400px;
   overflow-y: auto;
+  max-height: 400px;
+  box-sizing: border-box;
+
+  &:hover {
+    border-color: #a78bfa;
+  }
 
   &::-webkit-scrollbar {
     width: 8px;
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(167, 139, 250, 0.1);
-    border-radius: 4px;
+    background: transparent;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(167, 139, 250, 0.4);
+    background: rgba(167, 139, 250, 0.3);
     border-radius: 4px;
 
     &:hover {
-      background: rgba(167, 139, 250, 0.6);
+      background: rgba(167, 139, 250, 0.5);
     }
   }
 `
@@ -117,7 +261,7 @@ export const ConstellationTitle = styled.div`
 
   h2 {
     font-size: 1.8rem;
-    color: #e2e8f0;
+    color: white;
     margin: 0;
   }
 
@@ -153,19 +297,70 @@ export const MainStarsContainer = styled.div`
 `
 
 export const StarChip = styled.span`
-  background: rgba(167, 139, 250, 0.15);
-  border: 1px solid #a78bfa;
+  position: relative;
+
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(167, 139, 250, 0.3);
   color: #e2e8f0;
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.85rem;
-  cursor: pointer;
+  cursor: ${props => (props.$available ? 'pointer' : 'not-allowed')};
+  opacity: ${props => (props.$available ? 1 : 0.58)};
   transition: all 0.3s ease;
 
   &:hover {
-    background: rgba(167, 139, 250, 0.3);
-    transform: translateY(-2px);
+    border-color: #a78bfa;
+    background: rgba(167, 139, 250, 0.1);
+    transform: ${props => (props.$available ? 'translateY(-2px)' : 'none')};
   }
+
+  &::after {
+    content: '밝기는 숫자가 작을수록 밝습니다.';
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+
+    background: rgba(30, 41, 59, 0.98);
+    border: 1px solid rgba(167, 139, 250, 0.3);
+    color: #e2e8f0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: normal;
+    white-space: nowrap;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition: opacity 0.2s ease;
+    z-index: 100;
+  }
+
+  &:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  ${props => props.$active && `
+    color: white;
+    background: rgba(167, 139, 250, 0.3);
+    border-color: #a78bfa;
+    box-shadow: 0 0 10px rgba(196, 181, 253, 0.5);
+    animation: selectedStarChipFlash 0.6s ease-in-out 3;
+  `}
+
+  @keyframes selectedStarChipFlash {
+    0%, 100% { box-shadow: 0 0 5px rgba(196, 181, 253, 0.35); }
+    50% { box-shadow: 0 0 16px rgba(196, 181, 253, 0.95); }
+  }
+`
+
+export const StarEnglish = styled.span`
+  font-size: 0.75rem;
+  color: #94a3b8;
 `
 
 export const ObservationInfo = styled.div`
@@ -180,7 +375,7 @@ export const ObservationInfo = styled.div`
 `
 
 export const InfoCard = styled.div`
-  background: rgba(167, 139, 250, 0.1);
+  background: rgba(30, 41, 59, 0.5);
   border: 1px solid rgba(167, 139, 250, 0.3);
   border-radius: 8px;
   padding: 1rem;
@@ -188,7 +383,7 @@ export const InfoCard = styled.div`
 
   .label {
     font-size: 0.75rem;
-    color: #a78bfa;
+    color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.5rem;
@@ -196,7 +391,7 @@ export const InfoCard = styled.div`
 
   .value {
     font-size: 1.3rem;
-    color: #e2e8f0;
+    color: white;
     font-weight: 600;
   }
 `
@@ -216,74 +411,60 @@ export const StorySection = styled.div`
   }
 `
 
+/* 오른쪽 영역 바깥쪽 배경을 투명하게 만들어 전체 배경 그라데이션과 완전히 일치시킴 */
 export const RightSection = styled.div`
-  flex: 0 0 35%;
+  min-width: 0;
+  width: 40%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  background: transparent;
+  border: none;
+  padding: 0;
 
   @media (max-width: 1024px) {
-    flex: none;
     width: 100%;
+    height: auto;
+    order: 1;
   }
 `
 
 export const SearchContainer = styled.div`
   position: relative;
+  /* 검색창 바깥의 엉뚱한 배경색 제거 */
+  background: transparent;
+  border: none;
+  padding: 0;
 `
 
 export const SearchInput = styled.input`
   width: 100%;
+  box-sizing: border-box;
   padding: 1rem;
-  border: 2px solid #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.3);
   border-radius: 8px;
-  background: rgba(20, 10, 50, 0.6);
-  color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
   font-size: 1rem;
   transition: all 0.3s ease;
 
   &::placeholder {
-    color: rgba(160, 174, 192, 0.6);
+    color: #64748b;
   }
 
   &:focus {
     outline: none;
-    border-color: #c084fc;
-    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+    border-color: #a78bfa;
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.2);
   }
 `
 
-export const ConstellationListContainer = styled.div`
-  background: rgba(20, 10, 50, 0.6);
-  border: 2px solid #a78bfa;
-  border-radius: 12px;
-  padding: 1rem;
-  max-height: 600px;
-  overflow-y: auto;
-  flex: 1;
 
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(167, 139, 250, 0.1);
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(167, 139, 250, 0.4);
-    border-radius: 4px;
-
-    &:hover {
-      background: rgba(167, 139, 250, 0.6);
-    }
-  }
-`
 
 export const ConstellationCard = styled.div`
-  background: ${props => (props.$isSelected ? 'rgba(167, 139, 250, 0.2)' : 'rgba(167, 139, 250, 0.05)')};
-  border: 2px solid ${props => (props.$isSelected ? '#a78bfa' : 'rgba(167, 139, 250, 0.2)')};
+  position: relative;
+  background: ${props => (props.$isSelected ? 'rgba(167, 139, 250, 0.15)' : 'rgba(30, 41, 59, 0.6)')};
+  border: 1px solid ${props => (props.$isSelected ? '#a78bfa' : 'rgba(167, 139, 250, 0.2)')};
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -294,9 +475,8 @@ export const ConstellationCard = styled.div`
   gap: 1rem;
 
   &:hover {
-    background: rgba(167, 139, 250, 0.15);
-    border-color: #c084fc;
-    transform: translateX(4px);
+    background: rgba(167, 139, 250, 0.1);
+    border-color: #a78bfa;
   }
 
   &:last-child {
@@ -305,16 +485,19 @@ export const ConstellationCard = styled.div`
 `
 
 export const ConstellationIcon = styled.div`
-  width: 50px;
-  height: 50px;
-  border-radius: 8px;
-  background: rgba(167, 139, 250, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
+  width: 70px;
+  height: 70px;
+  border-radius: 10px;
+  overflow: hidden;
   flex-shrink: 0;
-  color: #a78bfa;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 `
 
 export const ConstellationInfo = styled.div`
@@ -324,19 +507,48 @@ export const ConstellationInfo = styled.div`
 
 export const ConstellationName = styled.div`
   font-size: 1rem;
-  color: #e2e8f0;
+  color: white;
   font-weight: 600;
   margin-bottom: 0.25rem;
 `
 
 export const ConstellationEnglish = styled.div`
   font-size: 0.85rem;
-  color: #a78bfa;
+  color: #94a3b8;
 `
 
 export const EmptyState = styled.div`
   text-align: center;
   padding: 2rem 1rem;
-  color: #a78bfa;
+  color: #94a3b8;
   font-size: 0.95rem;
+`
+
+export const LoadingState = styled.div`
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a78bfa;
+  font-size: 1rem;
+`
+
+export const ConstellationCardLoading = styled.div`
+  position: absolute;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  border-radius: 8px;
+
+  z-index: 10;
 `

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { loginAPI } from '../api/auth'
 import {
   FormContainer,
@@ -16,15 +16,11 @@ import {
   LinksGroup,
   SignupLink,
   ForgotLink,
-  Divider,
-  DividerText,
-  SocialButtonsGroup,
-  SocialButton,
-  SocialIcon,
 } from './styles/LoginPage.styles'
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -51,14 +47,24 @@ function LoginPage() {
         pwd: formData.password,
       })
 
-      // 2. 서버가 준 토큰을 Local Storage에 저장
+      // 2. 서버가 준 토큰을 Local Storage에 항상 저장 (다른 컴포넌트 충돌 방지)
       if (data.accessToken) {
         localStorage.setItem('accessToken', data.accessToken)
         localStorage.setItem('user', JSON.stringify(data.user))
+
+        // 로그인 유지 체크 여부에 따라 플래그 저장
+        if (formData.remember) {
+          localStorage.setItem('isRemembered', 'true')
+        } else {
+          localStorage.removeItem('isRemembered')
+        }
       }
 
       alert('로그인이 완료되었습니다!')
-      navigate('/') // 메인 페이지로 이동
+
+      const from = location.state?.from || '/'
+
+      navigate(from, { replace: true })
     } catch (error) {
       alert(error.message || '이메일 또는 비밀번호가 올바르지 않습니다.')
     } finally {
