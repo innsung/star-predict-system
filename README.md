@@ -113,6 +113,69 @@ docker-compose.yml      Frontend·Backend·MySQL 실행 구성
 
 ## 실행 방법
 
+### 로컬 실행 (Windows PowerShell)
+
+Python, Node.js, MySQL을 준비하고 Frontend와 Backend를 **각각 별도 터미널**에서 실행합니다. 아래 명령은 저장소 루트를 시작 위치로 합니다.
+
+#### 1. MySQL·환경변수 준비
+
+MySQL에서 사용할 데이터베이스를 먼저 생성합니다.
+
+```sql
+CREATE DATABASE IF NOT EXISTS astra CHARACTER SET utf8mb4;
+```
+
+`server/.env`에 아래 항목을 설정합니다. 기존 파일이 있다면 필요한 값만 수정합니다.
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=astra
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+ACCESS_SECRET=replace_with_a_unique_access_secret_at_least_32_chars
+REFRESH_SECRET=replace_with_a_different_refresh_secret_at_least_32_chars
+FRONT_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+YOLO_MODEL_PATH=D:/dev/star-predict-system/deploy/models/best.pt
+KNOWN_WCS_DIR=D:/dev/star-predict-system/deploy/wcs-cache
+```
+
+모델·캐시 경로는 실제 저장 위치로 변경합니다. 두 인증 비밀값은 서로 다른 32자 이상의 값으로 설정합니다. 서버 시작 시 모델에 정의된 테이블을 생성하지만, 별자리·별 등 기준 데이터는 별도로 준비해야 합니다. 운세·결제 기능을 사용할 때는 `.env.docker.example`의 관련 API 설정도 참고해 `server/.env`에 추가하고, 결제 복귀 주소는 로컬 Frontend 주소에 맞춥니다.
+
+#### 2. Backend 실행
+
+```powershell
+cd server
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r ../Constellation/requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
+```
+
+- 서버 확인: `http://localhost:8000`
+- API 문서: `http://localhost:8000/docs`
+- 가상환경의 Python을 직접 실행하므로 별도 활성화 명령은 필요하지 않습니다.
+
+#### 3. Frontend 실행
+
+새 터미널을 열고 저장소 루트에서 실행합니다.
+
+```powershell
+cd front
+npm install
+npm run dev
+```
+
+접속 주소는 `http://localhost:5173`입니다. Vite가 `/api` 요청을 `http://127.0.0.1:8000`의 Backend로 전달합니다.
+
+#### 4. 사진 분석에 필요한 추가 준비
+
+- YOLO 추론에는 학습된 `best.pt` 파일이 필요합니다.
+- 새로운 사진의 Plate Solving에는 Windows의 WSL Ubuntu 환경에 Astrometry.net과 해당 화각의 인덱스가 필요합니다. Python 패키지 설치만으로 이 도구가 설치되지는 않습니다.
+- 별 카탈로그·연결선과 WCS 캐시 등 분석 자료도 준비해야 합니다. 설치·데이터 준비는 [Constellation 상세 README](Constellation/README.md)를 참고합니다.
+
+### Docker 실행
+
 Docker Compose 구성을 기준으로 합니다. 저장소 코드 외에 학습 모델과 천문 기준 자료를 준비해야 사진 분석을 실행할 수 있습니다.
 
 1. `.env.docker.example`을 `.env.docker`로 복사하고 DB·인증·외부 API 설정을 입력합니다. 기존 설정 파일이 있다면 필요한 값만 수정합니다.
